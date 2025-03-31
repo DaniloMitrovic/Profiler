@@ -1,10 +1,10 @@
 // HEADER for "ARCH" used in "PROFILING" for specific module "DEPENDANCIES"
 
-/*
-*
-*
-*
-*
+/*	This is where all different flag functionalities is implemented for ARCH_PROFILE
+
+*	This header file will change its composition depending on what flag is active, Thus not usable for optimized code.
+	If you are finished with coding you dont need it. 
+
 */
 
 #pragma once
@@ -28,38 +28,42 @@
 // header definition
 #ifndef _ARCH_PROFILING_DEPENDANCIES_H
 
-#include <chrono>
-#include <cmath>
+#include <chrono>	// std::chrono for ut_timer
+#include <cmath>	// cos,tan,sqrt,pow .... 
 
+// definition of caller structure.
 #if ( (ARCH_PROFILE & ARCH_CLRS) == ARCH_CLRS)
 	
 	template <typename T>
 	struct caller
 	{
-	
-		T initialization;
-		T casting;
-		T operators;
-		T functions;
-		T methods;
-		T misc;
+		// each field is determined by part of structures/classes lifespan.
+		T initialization;	// intialisation of structure with brackets or attributes 
+		T casting;		// copy, move and type punning operators, constructors  
+		T operators;		// +-*/... operator overloading templates
+		T functions;		// functions that use structure as argument 
+		T methods;		// private,public,static methods 
+		T misc;			// anything else one might need to measure.
 		
-		caller()
+		caller()		// defaults all to 0
 		:initialization(T(0)),casting(T(0)),
 		operators(T(0)),functions(T(0)),
 		methods(T(0)),misc(T(0))
 		{}
 		~caller() = default;
 		
+		// if one would need to bit closer specification of manipulator callers  
 		T manipulators() const
 		{
 			return this->functions + this->methods;
 		}
+		// if one would need to bit closer specification of initialisation callers 
 		T initializers() const
 		{
 			return this->initialization + this->casting + this->operators;
 		}
 		
+		//total count of calls during run.
 		T total() const
 		{
 			return this->manipulators()+this->initializers() + this->misc;
@@ -77,10 +81,21 @@
 		return os;
 	}
 	
-	static caller<unsigned> global_caller;
-	static caller<double>	global_caller_time;
+	static caller<unsigned> global_caller;		// main diriving force for entire project 
+	static caller<double>	global_caller_time;	// main driving force for time for entire project
 	
+	void caller_to_time(float avrg_time)
+	{
+		global_caller_time.initialization = static_cast<double>(global_caller.initialization)*avrg_time;
+		global_caller_time.casting = static_cast<double>(global_caller.casting)*avrg_time;
+		global_caller_time.operators = static_cast<double>(global_caller.operators)*avrg_time;
+		global_caller_time.functions = static_cast<double>(global_caller.functions)*avrg_time;
+		global_caller_time.methods = static_cast<double>(global_caller.methods)*avrg_time;
+		global_caller_time.misc = static_cast<double>(global_caller.misc)*avrg_time;
+	}
 	
+	// macros that are used to call for specific elements
+	// don't use them with ';' so linker can remove ';' if they aren't triggered.
 	#define INITALISER_COUNTER 	global_caller.initialization++;
 	#define CASTING_COUNTER 	global_caller.casting++;
 	#define OPERATOR_COUNTER 	global_caller.operators++;
@@ -88,19 +103,32 @@
 	#define METHOD_COUNTER 		global_caller.methods++;
 	#define MISC_COUNTER 		global_caller.misc++;
 	
-	
+	#define TRANSLATE_CALLERS(x)	caller_to_time(x);
 	#define DISPLAY_CALLERS 	std::cout << global_caller<< std::endl;
+	#define DISPLAY_CALLERS_TIME 	std::cout << global_caller_time<< std::endl;
 	#define TOTAL_CALLS		global_caller.total()
 
 #else
-	#define DISPLAY_CALLERS
+	// default functionality if ARCH_CLRS isn't triggered.
+	#define INITALISER_COUNTER
+	#define CASTING_COUNTER 
+	#define OPERATOR_COUNTER 
+	#define FUNCTION_COUNTER 
+	#define METHOD_COUNTER 	
+	#define MISC_COUNTER 	
+	
+	#define TRANSLATE_CALLERS(x)
+	#define DISPLAY_CALLERS 	
+	#define DISPLAY_CALLERS_TIME 	
 	#define TOTAL_CALLS		1
 #endif
 
 
-
+// definition of unit test structure.
+// I made this so i can quickly build identity tests
 #if ( (ARCH_PROFILE & ARCH_UTST) == ARCH_UTST)
 
+	// if verbose macros (not used outside of this delcaration)
 	#if ( (ARCH_PROFILE & ARCH_VERB) == ARCH_VERB)
 		#define V_GEN_IND	std::cout << "Testing     General    Identity\t\t";
 		#define V_GEN_ADD	std::cout << "Testing    Additive    Identity\t\t";
@@ -120,10 +148,12 @@
 		#define V_UT_FAIL	std::cout<<'\n';
 	#endif
 
+	// unit test structure 
+	// on pass it shows one Green PASS (on linux, GNU)
+	// on fail it shows one what it got, and what it expected 
 	template <class T>
 	struct UTEST
 	{
-	
 		static constexpr bool IDENTITY( T lhs, T rhs)
 		{
 			V_GEN_IND
@@ -240,6 +270,8 @@
 		}
 	};
 	
+	// macros that are used to call for specific elements
+	// don't use them with ';' so linker can remove ';' if they aren't triggered.
 	#define UTEST_GEN_ID(t,x,y) UTEST<t>::IDENTITY(x,y);
 	#define UTEST_ADD_ID(t,x,y,z) UTEST<t>::IDENTITY_ADDITIVE(x,y,z);
 	#define UTEST_SUB_ID(t,x,y,z) UTEST<t>::IDENTITY_SUBTRACTIVE(x,y,z);
@@ -247,6 +279,7 @@
 	#define UTEST_DIV_ID(t,x,y,z) UTEST<t>::IDENTITY_DIVISIVE(x,y,z);
 	
 #else
+	// default functionality if ARCH_UTST isn't triggered.
 	#define UTEST_GEN_ID(t,x,y) 
 	#define UTEST_ADD_ID(t,x,y,z) 
 	#define UTEST_SUB_ID(t,x,y,z)
